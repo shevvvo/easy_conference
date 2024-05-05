@@ -26,6 +26,7 @@ project(
 add_executable(hard-coding-server server/main.cpp)
 add_executable(hard-coding-client client/main.cpp)
 
+
 cpmaddpackage(
         NAME boost
         GIT_REPOSITORY "git@github.com:boostorg/boost.git"
@@ -44,5 +45,5 @@ if (NOT PROJECT_IS_TOP_LEVEL)
     return()
 endif ()
 
-#sl_compiler_warnings(hard-coding-server WARNINGS_AS_ERRORS)
-#sl_compiler_warnings(hard-coding-client WARNINGS_AS_ERRORS)
+sl_compiler_warnings(hard-coding-server WARNINGS_AS_ERRORS)
+sl_compiler_warnings(hard-coding-client WARNINGS_AS_ERRORS)

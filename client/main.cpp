@@ -5,6 +5,7 @@
 #include <iostream>
 #include <boost/noncopyable.hpp>
 #include <nlohmann/json.hpp>
+#include <memory>
 
 using namespace boost::asio;
 io_service service;
@@ -21,10 +22,10 @@ class talk_to_svr : public boost::enable_shared_from_this<talk_to_svr>
     }
 public:
     typedef boost::system::error_code error_code;
-    typedef boost::shared_ptr<talk_to_svr> ptr;
+    typedef std::shared_ptr<talk_to_svr> ptr;
 
     static ptr create(const ip::tcp::endpoint& ep, std::string& username) {
-        ptr new_(new talk_to_svr(username));
+        ptr new_(std::make_shared<talk_to_svr>(username));
         new_->start(ep);
         return new_;
     }
