@@ -21,10 +21,12 @@ project(
         HOMEPAGE_URL "TODO"
         LANGUAGES C CXX)
 
+include_directories(${PROJECT_SOURCE_DIR}/primitives)
 
-
-add_executable(hard-coding-server server/main.cpp)
-add_executable(hard-coding-client client/main.cpp)
+add_executable(hard-coding-server server/main.cpp
+        primitives/message.h)
+add_executable(hard-coding-client client/main.cpp
+        primitives/message.h)
 
 
 cpmaddpackage(
@@ -38,8 +40,18 @@ cpmaddpackage(
         GIT_REPOSITORY "git@github.com:nlohmann/json.git"
         GIT_TAG v3.11.3)
 
-target_link_libraries(hard-coding-server PRIVATE Boost::system Boost::asio nlohmann_json::nlohmann_json)
-target_link_libraries(hard-coding-client PRIVATE Boost::system Boost::asio nlohmann_json::nlohmann_json)
+cpmaddpackage(
+        NAME spdlog
+        GIT_REPOSITORY "git@github.com:gabime/spdlog.git"
+        GIT_TAG v1.14.1)
+
+cpmaddpackage(
+        NAME libassert
+        GIT_REPOSITORY "git@github.com:jeremy-rifkin/libassert.git"
+        GIT_TAG v2.0.2)
+
+target_link_libraries(hard-coding-server PRIVATE Boost::system Boost::asio nlohmann_json::nlohmann_json spdlog::spdlog libassert::assert)
+target_link_libraries(hard-coding-client PRIVATE Boost::system Boost::asio nlohmann_json::nlohmann_json spdlog::spdlog libassert::assert)
 
 if (NOT PROJECT_IS_TOP_LEVEL)
     return()

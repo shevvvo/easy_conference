@@ -5,27 +5,30 @@
 #include <iostream>
 #include <boost/noncopyable.hpp>
 #include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include <memory>
+#include "message.h"
 
-using namespace boost::asio;
-io_service service;
+auto console = spdlog::stdout_color_mt("console");
+boost::asio::io_service service;
 
-class talk_to_svr : public boost::enable_shared_from_this<talk_to_svr>
-        , boost::noncopyable {
-    typedef talk_to_svr self_type;
-    talk_to_svr(std::string& username)
+class clientConnection : public boost::enable_shared_from_this<clientConnection>, boost::noncopyable {
+    explicit clientConnection(std::string& username)
             : sock_(service), started_(true), input_stream_(service, STDIN_FILENO), username_(username) {}
-    void start(const ip::tcp::endpoint& ep) {
+
+    void start(const boost::asio::ip::tcp::endpoint& ep) {
         sock_.async_connect(ep, [shared_this = shared_from_this()](const error_code & err) {
             shared_this->on_connect(err);
         });
     }
+
 public:
     typedef boost::system::error_code error_code;
-    typedef std::shared_ptr<talk_to_svr> ptr;
+    typedef std::shared_ptr<clientConnection> ptr;
 
-    static ptr create(const ip::tcp::endpoint& ep, std::string& username) {
-        ptr new_(std::make_shared<talk_to_svr>(username));
+    static ptr create(const boost::asio::ip::tcp::endpoint& ep, std::string& username) {
+        ptr new_(new clientConnection(username));
         new_->start(ep);
         return new_;
     }
@@ -38,7 +41,7 @@ public:
 private:
     void on_connect(const error_code & err) {
         if ( err)      stop();
-        std::cout << "CONNECTED\n";
+        console->info("Connected");
         std::cout << "Choose option:\n";
         std::cout << "1. Create new room\n";
         std::cout << "2. Join existing room\n";
@@ -46,13 +49,9 @@ private:
         std::cin >> opt;
         switch (opt) {
             case 1: {
-                nlohmann::json msg = {
-                        {"command", "create"},
-                        {"user", username_},
-                        {"data", ""},
-                };
-                std::string ll = msg.dump();
-                sock_.async_write_some( buffer(msg.dump() + "\e", msg.dump().size() + 1),[shared_this = shared_from_this()](const error_code & err, size_t bytes) {
+                primitives::networkMessage newMsg = {"create", username_, ""};
+                auto dump = nlohmann::json(newMsg).dump();
+                sock_.async_write_some( boost::asio::buffer(dump + "\e", dump.size() + 1),[shared_this = shared_from_this()](const error_code & err, size_t bytes) {
                     shared_this->on_create_sent(err, bytes);
                 });
                 break;
@@ -61,12 +60,9 @@ private:
                 std::cout << "Enter chat id: ";
                 std::string chat_id;
                 std::cin >> chat_id;
-                nlohmann::json msg = {
-                        {"command", "join"},
-                        {"user", username_},
-                        {"data", chat_id},
-                };
-                sock_.async_write_some( buffer(msg.dump() + "\e", msg.dump().size() + 1),[shared_this = shared_from_this()](const error_code & err, size_t bytes) {
+                primitives::networkMessage newMsg = {"join", username_, chat_id};
+                auto dump = nlohmann::json(newMsg).dump();
+                sock_.async_write_some( boost::asio::buffer(dump + "\e", dump.size() + 1),[shared_this = shared_from_this()](const error_code & err, size_t bytes) {
                     shared_this->on_join_sent(err, bytes);
                 });
                 break;
@@ -79,20 +75,21 @@ private:
 
     void on_create_sent(const error_code & err, size_t bytes) {
         if (err) stop();
-        async_read(sock_, buffer(read_buffer_), [shared_this = shared_from_this()](const boost::system::error_code & err, size_t bytes) {return shared_this->read_complete(err, bytes);},
+        async_read(sock_, boost::asio::buffer(read_buffer_), [shared_this = shared_from_this()](const boost::system::error_code & err, size_t bytes) {return shared_this->read_complete(err, bytes);},
                    [shared_this = shared_from_this()](const error_code & err, size_t bytes) {shared_this->on_create_read(err, bytes);});
     }
 
     void on_create_read(const error_code & err, size_t bytes) {
         if (err) stop();
         nlohmann::json answer = nlohmann::json::parse(std::string(read_buffer_, bytes - 1));
-        if (answer["command"] == "create") {
-            if (!answer["data"].empty()) {
-                std::cout << "New room created: " << answer["data"] << "\n";
+        auto newMessage = answer.template get<primitives::networkMessage>();
+        if (newMessage.command == "create") {
+            if (!newMessage.data.empty()) {
+                console->info("New room created: " + newMessage.data);
                 read_from_input();
                 read_from_socket();
             } else {
-                std::cout << "Failed to create new room\n";
+                console->info("Failed to create new room");
                 stop();
             }
         }
@@ -100,20 +97,22 @@ private:
 
     void on_join_sent(const error_code & err, size_t bytes) {
         if (err) stop();
-        async_read(sock_, buffer(read_buffer_), [shared_this = shared_from_this()](const boost::system::error_code & err, size_t bytes) {return shared_this->read_complete(err, bytes);},
+        async_read(sock_, boost::asio::buffer(read_buffer_), [shared_this = shared_from_this()](const boost::system::error_code & err, size_t bytes) {return shared_this->read_complete(err, bytes);},
                    [shared_this = shared_from_this()](const error_code & err, size_t bytes) {shared_this->on_join_read(err, bytes);});
     }
 
     void on_join_read(const error_code & err, size_t bytes) {
         std::cout << "Join read " + std::string(read_buffer_, bytes - 1) + "\n";
+        console->info("Join read " + std::string(read_buffer_, bytes - 1));
         if (err) stop();
         nlohmann::json answer = nlohmann::json::parse(std::string(read_buffer_, bytes - 1));
-        if (answer["command"] == "join") {
-            if (answer["data"] == "success") {
+        auto newMessage = answer.template get<primitives::networkMessage>();
+        if (newMessage.command == "join") {
+            if (newMessage.data == "success") {
                 read_from_input();
                 read_from_socket();
             } else {
-                std::cout << "Failed to join\n";
+                console->info("Failed to join");
                 stop();
             }
         }
@@ -122,10 +121,8 @@ private:
     void on_read(const error_code & err, size_t bytes) {
         if (err) stop();
         if (!started()) return;
-        std::string ans = std::string(read_buffer_, bytes);
         nlohmann::json answer = nlohmann::json::parse(std::string(read_buffer_, bytes - 1));
-        std::string ll = answer["data"];
-        std::cout << ll;
+        console->info(answer.dump());
         read_from_socket();
     }
 
@@ -138,12 +135,9 @@ private:
     void do_write(const error_code & err, size_t bytes) {
         if (err) stop();
         if ( !started() ) return;
-        nlohmann::json msg = {
-                {"command", "message"},
-                {"user", username_},
-                {"data", std::string(input_buffer_, bytes)},
-        };
-        sock_.async_write_some( buffer(msg.dump() + "\e", msg.dump().size() + 1),
+        primitives::networkMessage newMsg = {"message", username_, std::string(input_buffer_, bytes)};
+        auto dump = nlohmann::json(newMsg).dump();
+        sock_.async_write_some( boost::asio::buffer(dump + "\e", dump.size() + 1),
                                 [shared_this = shared_from_this()](const error_code & err, size_t bytes) {shared_this->on_write(err, bytes);});
     }
 
@@ -160,18 +154,18 @@ private:
     }
 
     void read_from_input() {
-        async_read(input_stream_, buffer(input_buffer_), [shared_this = shared_from_this()](const boost::system::error_code & err, size_t bytes) {return shared_this->input_complete(err, bytes);},
+        async_read(input_stream_, boost::asio::buffer(input_buffer_), [shared_this = shared_from_this()](const boost::system::error_code & err, size_t bytes) {return shared_this->input_complete(err, bytes);},
                    [shared_this = shared_from_this()](const error_code & err, size_t bytes) {shared_this->do_write(err, bytes);});
     }
 
     void read_from_socket() {
-        async_read(sock_, buffer(read_buffer_), [shared_this = shared_from_this()](const boost::system::error_code & err, size_t bytes) {return shared_this->read_complete(err, bytes);},
+        async_read(sock_, boost::asio::buffer(read_buffer_), [shared_this = shared_from_this()](const boost::system::error_code & err, size_t bytes) {return shared_this->read_complete(err, bytes);},
                    [shared_this = shared_from_this()](const error_code & err, size_t bytes) {shared_this->on_read(err, bytes);});
     }
 
 private:
-    ip::tcp::socket sock_;
-    posix::stream_descriptor input_stream_;
+    boost::asio::ip::tcp::socket sock_;
+    boost::asio::posix::stream_descriptor input_stream_;
     enum { max_msg = 1024 };
     char read_buffer_[max_msg];
     char input_buffer_[max_msg];
@@ -183,8 +177,8 @@ int main(int argc, char* argv[]) {
     std::string username;
     std::cout << "Enter your username\n";
     std::cin >> username;
-    ip::tcp::endpoint ep( ip::address::from_string("127.0.0.1"), 8001);
-    talk_to_svr::create(ep, username);
+    boost::asio::ip::tcp::endpoint ep( boost::asio::ip::address::from_string("127.0.0.1"), 8001);
+    clientConnection::create(ep, username);
 
     service.run();
 }
