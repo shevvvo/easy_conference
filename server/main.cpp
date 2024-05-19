@@ -9,31 +9,31 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include "message.h"
-
-boost::asio::io_service service;
-auto console = spdlog::stdout_color_mt("console");
+#include "user_interaction.cpp"
 
 class serverConnection;
-typedef std::shared_ptr<serverConnection> client_ptr;
-std::unordered_map<std::string, std::vector<client_ptr>> rooms_;
+namespace typedefs {
+    typedef std::shared_ptr<serverConnection> client_ptr;
+    typedef std::unordered_map<std::string, std::vector<client_ptr>> rooms_map;
+    typedef boost::asio::ip::tcp::acceptor accept;
+    typedef boost::system::error_code error_code;
+}
 
 class serverConnection : public std::enable_shared_from_this<serverConnection>, boost::noncopyable {
-    serverConnection() : sock_(service), started_(false) {
-    }
+    serverConnection(boost::asio::io_service& service, typedefs::rooms_map& rooms, boost::uuids::random_generator& generator) : sock_(service), started_(false), rooms_(rooms), random_generator_(generator) {}
 public:
-    typedef boost::system::error_code error_code;
     typedef std::shared_ptr<serverConnection> ptr;
 
     void start() {
         started_ = true;
         do_read();
     }
-    static ptr new_() {
-        ptr new_client(new serverConnection);
+    static ptr create(boost::asio::io_service& service, typedefs::rooms_map& rooms, boost::uuids::random_generator& generator) {
+        ptr new_client(new serverConnection(service, rooms, generator));
         return new_client;
     }
     void stop() {
-        console->info("Stopping server connection");
+        spdlog::get("logger")->info("Stopping server connection");
         if ( !started_) return;
         started_ = false;
         sock_.close();
@@ -49,75 +49,87 @@ public:
     boost::asio::ip::tcp::socket & sock() { return sock_;}
     std::string getUsername() const { return username_; }
 private:
-    void on_read(const error_code & err, size_t bytes) {
+    void on_read(const typedefs::error_code & err, size_t bytes) {
         if ( err) stop();
         if ( !started() ) return;
         if (!bytes) return;
         nlohmann::json req = nlohmann::json::parse(std::string(read_buffer_, bytes - 1));
-        auto reqStruct = req.template get<primitives::networkMessage>();
-        console->info("Read the message: " + req.dump());
+        auto req_struct = req.template get<primitives::NetworkMessage>();
+        spdlog::get("logger")->info("Read the message: " + req.dump());
 
-        if (reqStruct.command == "join") {
-            std::string id = reqStruct.data;
-            auto it = rooms_.find(id);
-            if (it != rooms_.end()) {
-                room_id_ = id;
-                it->second.push_back(shared_from_this());
-                primitives::networkMessage answer = {"join", "", "success"};
-                auto dump = nlohmann::json(answer).dump();
-                username_ = reqStruct.user;
-                sock_.async_write_some(boost::asio::buffer(dump + "\e", dump.size() + 1),
-                                       [shared_this = shared_from_this()](const error_code &err, size_t bytes) {shared_this->on_write(err, bytes);});
-
-            } else {
-                primitives::networkMessage answer = {"join", "", "fail"};
-                auto dump = nlohmann::json(answer).dump();
-                sock_.async_write_some(boost::asio::buffer(dump + "\e", dump.size() + 1),
-                                       [shared_this = shared_from_this()](const error_code &err, size_t bytes) {shared_this->on_write(err, bytes);});
-            }
-        } else if (reqStruct.command == "create") {
-            boost::uuids::uuid uuid = boost::uuids::random_generator()();
-            room_id_ = boost::uuids::to_string(uuid);
-            std::vector<client_ptr> vec = {shared_from_this()};
-            rooms_[room_id_] = vec;
-            primitives::networkMessage answer = {"create", "", "room_id_"};
-            auto dump = nlohmann::json(answer).dump();
-            username_ = reqStruct.user;
-            sock_.async_write_some(boost::asio::buffer(dump + "\e", dump.size() + 1),
-                                   [shared_this = shared_from_this()](const error_code & err, size_t bytes) {shared_this->on_write(err, bytes);});
-        } else {
-            if (!room_id_.empty()) {
-                auto it = rooms_.find(room_id_);
+        switch (req_struct.command) {
+            case primitives::Command::CMD_JOIN: {
+                std::string id = req_struct.data;
+                auto it = rooms_.find(id);
                 if (it != rooms_.end()) {
-                    std::string strr = std::string(read_buffer_, bytes);
-                    for (auto& elem : it->second) {
-                        std::string nmm = elem->getUsername();
-                        if (elem->getUsername() != username_) {
-                            std::string dump = req.dump();
-                            elem->sock().async_write_some(boost::asio::buffer(dump + "\e", dump.size() + 1),
-                                                          [shared_this = shared_from_this()](const error_code &err,size_t bytes) {shared_this->on_write(err, bytes); });
+                    room_id_ = id;
+                    it->second.push_back(shared_from_this());
+                    primitives::NetworkMessage answer = {primitives::Command::CMD_JOIN, "", "success"};
+                    auto dump = nlohmann::json(answer).dump() + "\e";
+                    username_ = req_struct.user;
+                    sock_.async_write_some(boost::asio::buffer(dump, dump.size()),
+                                           [shared_this = shared_from_this()](const typedefs::error_code &err, size_t bytes) {shared_this->on_write(err, bytes);});
+
+                } else {
+                    primitives::NetworkMessage answer = {primitives::Command::CMD_JOIN, "", "fail"};
+                    auto dump = nlohmann::json(answer).dump() + "\e";
+                    sock_.async_write_some(boost::asio::buffer(dump, dump.size()),
+                                           [shared_this = shared_from_this()](const typedefs::error_code &err, size_t bytes) {shared_this->on_write(err, bytes);});
+                }
+                break;
+            }
+            case primitives::Command::CMD_CREATE: {
+                room_id_ = boost::uuids::to_string(random_generator_());
+                std::vector<typedefs::client_ptr> vec{ shared_from_this() };
+                rooms_.insert_or_assign(room_id_, vec);
+                primitives::NetworkMessage answer = {primitives::Command::CMD_CREATE, "", room_id_};
+                auto dump = nlohmann::json(answer).dump() + "\e";
+                username_ = req_struct.user;
+                sock_.async_write_some(boost::asio::buffer(dump, dump.size()),
+                                       [shared_this = shared_from_this()](const typedefs::error_code & err, size_t bytes) {shared_this->on_write(err, bytes);});
+                break;
+            }
+            case primitives::Command::CMD_MESSAGE: {
+                if (!room_id_.empty()) {
+                    auto it = rooms_.find(room_id_);
+                    if (it != rooms_.end()) {
+                        for (auto& elem : it->second) {
+                            std::string nmm = elem->getUsername();
+                            if (elem->getUsername() != username_) {
+                                std::string dump = req.dump() + "\e";
+                                elem->sock().async_write_some(boost::asio::buffer(dump, dump.size()),
+                                                              [shared_this = shared_from_this()](const typedefs::error_code &err,size_t bytes) {shared_this->on_write(err, bytes); });
+                            }
                         }
                     }
                 }
+                break;
+            }
+            default: {
+                break;
             }
         }
         do_read();
     }
 
-    void on_write(const error_code & err, size_t bytes) {
-        if (err) stop();
+    void on_write(const typedefs::error_code & err, size_t bytes) {
+        if (err) {
+            stop();
+        }
     }
     void do_read() {
         async_read(sock_, boost::asio::buffer(read_buffer_), [shared_this = shared_from_this()](const boost::system::error_code& err, std::size_t bytes) {return shared_this->read_complete(err, bytes);},
                    [shared_this = shared_from_this()](const boost::system::error_code& err, std::size_t bytes) {shared_this->on_read(err, bytes);});
     }
     void do_write(const std::string & msg) {
-        if ( !started() ) return;
+        if (!started()) {
+            return;
+        }
         std::copy(msg.begin(), msg.end(), write_buffer_);
-        sock_.async_write_some( boost::asio::buffer(write_buffer_, msg.size()),[shared_this = shared_from_this()](const error_code & err, size_t bytes) {shared_this->on_write(err, bytes);});
+        sock_.async_write_some( boost::asio::buffer(write_buffer_, msg.size()),[shared_this = shared_from_this()](const typedefs::error_code & err, size_t bytes) {shared_this->on_write(err, bytes);});
     }
     size_t read_complete(const boost::system::error_code & err, size_t bytes) {
-        if ( err) {
+        if (err) {
             return 0;
         }
         bool found = std::find(read_buffer_, read_buffer_ + bytes, '\e') < read_buffer_ + bytes;
@@ -127,24 +139,32 @@ private:
     std::string username_;
     std::string room_id_;
     boost::asio::ip::tcp::socket sock_;
-    enum { max_msg = 1024 };
+    static const int max_msg = 1024;
     char read_buffer_[max_msg];
     char write_buffer_[max_msg];
     bool started_;
+    typedefs::rooms_map& rooms_;
+    boost::uuids::random_generator& random_generator_;
 };
 
-boost::asio::ip::tcp::acceptor acceptor(service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), 8001));
-
-void handle_accept(serverConnection::ptr client, const boost::system::error_code & err) {
-    console->info("Handling accept");
+void handle_accept(serverConnection::ptr client, const boost::system::error_code & err, boost::asio::ip::tcp::acceptor& acceptor, boost::asio::io_service& service, typedefs::rooms_map& rooms, boost::uuids::random_generator& generator) {
+    spdlog::get("logger")->info("Handling accept");
     client->start();
-    serverConnection::ptr new_client = serverConnection::new_();
-    acceptor.async_accept(new_client->sock(), [client = new_client](const boost::system::error_code & err){ handle_accept(client, err);});
+    serverConnection::ptr new_client = serverConnection::create(service, rooms, generator);
+    acceptor.async_accept(new_client->sock(), [client = new_client, &acceptor = acceptor, &service = service, &rooms = rooms, &generator = generator]
+    (const boost::system::error_code & err){ handle_accept(client, err, acceptor, service, rooms, generator);});
 }
 
 int main(int argc, char* argv[]) {
-    console->info("Server started");
-    serverConnection::ptr client = serverConnection::new_();
-    acceptor.async_accept(client->sock(), [client = client](const boost::system::error_code & err){ handle_accept(client, err);});
+    typedefs::rooms_map rooms;
+    boost::asio::io_service service;
+    boost::uuids::random_generator random_generator_;
+    auto logger = spdlog::stdout_color_mt("logger");
+    boost::asio::ip::tcp::acceptor acceptor(service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), 8001));
+
+    logger->info("Server started");
+    serverConnection::ptr client = serverConnection::create(service, rooms, random_generator_);
+    acceptor.async_accept(client->sock(), [client = client, &acceptor = acceptor, &service = service, &rooms = rooms, &generator = random_generator_]
+    (const boost::system::error_code & err){ handle_accept(client, err, acceptor, service, rooms, generator);});
     service.run();
 }

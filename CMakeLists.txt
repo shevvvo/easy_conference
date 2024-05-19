@@ -21,12 +21,15 @@ project(
         HOMEPAGE_URL "TODO"
         LANGUAGES C CXX)
 
-include_directories(${PROJECT_SOURCE_DIR}/primitives)
+include_directories(${PROJECT_SOURCE_DIR}/primitives/include)
+include_directories(${PROJECT_SOURCE_DIR}/primitives/src)
 
-add_executable(hard-coding-server server/main.cpp
-        primitives/message.h)
-add_executable(hard-coding-client client/main.cpp
-        primitives/message.h)
+add_library(primitives STATIC primitives/include/message.h primitives/include/user_interaction.h primitives/src/user_interaction.cpp)
+set_target_properties(primitives PROPERTIES LINKER_LANGUAGE CXX)
+
+add_executable(hard-coding-server server/main.cpp)
+add_executable(hard-coding-client client/main.cpp)
+
 
 
 cpmaddpackage(
@@ -50,8 +53,9 @@ cpmaddpackage(
         GIT_REPOSITORY "git@github.com:jeremy-rifkin/libassert.git"
         GIT_TAG v2.0.2)
 
-target_link_libraries(hard-coding-server PRIVATE Boost::system Boost::asio nlohmann_json::nlohmann_json spdlog::spdlog libassert::assert)
-target_link_libraries(hard-coding-client PRIVATE Boost::system Boost::asio nlohmann_json::nlohmann_json spdlog::spdlog libassert::assert)
+target_link_libraries(primitives nlohmann_json::nlohmann_json)
+target_link_libraries(hard-coding-server PRIVATE Boost::system Boost::asio spdlog::spdlog libassert::assert primitives)
+target_link_libraries(hard-coding-client PRIVATE Boost::system Boost::asio spdlog::spdlog libassert::assert primitives)
 
 if (NOT PROJECT_IS_TOP_LEVEL)
     return()
