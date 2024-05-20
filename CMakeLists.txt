@@ -28,7 +28,6 @@ add_executable(hard-coding-server server/main.cpp)
 add_executable(hard-coding-client client/main.cpp)
 
 
-
 cpmaddpackage(
         NAME boost
         GIT_REPOSITORY "git@github.com:boostorg/boost.git"

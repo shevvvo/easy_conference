@@ -6,15 +6,15 @@
 
 namespace primitives {
     enum Command {
-        CMD_CREATE=1,
+        CMD_CREATE = 1,
         CMD_JOIN,
         CMD_MESSAGE,
     };
 
-    NLOHMANN_JSON_SERIALIZE_ENUM( Command, {
-        {CMD_CREATE, "create"},
-        {CMD_JOIN, "join"},
-        {CMD_MESSAGE, "message"},
+    NLOHMANN_JSON_SERIALIZE_ENUM(Command, {
+        { CMD_CREATE, "create" },
+        { CMD_JOIN, "join" },
+        { CMD_MESSAGE, "message" },
     })
 
     struct NetworkMessage {
