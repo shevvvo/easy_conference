@@ -11,23 +11,23 @@
 #include "message.h"
 #include "user_interaction.cpp"
 
-class serverConnection;
-using ClientPtr = std::shared_ptr<serverConnection>;
+class ServerConnection;
+using ClientPtr = std::shared_ptr<ServerConnection>;
 using RoomsMap = std::unordered_map<std::string, std::vector<ClientPtr>>;
 using Acceptor = boost::asio::ip::tcp::acceptor;
 using ErrorCode = boost::system::error_code;
 
-class serverConnection : public std::enable_shared_from_this<serverConnection>, boost::noncopyable {
-    serverConnection(boost::asio::io_service& service, RoomsMap& rooms, boost::uuids::random_generator& generator) : sock_(service), started_(false), rooms_(rooms), random_generator_(generator) {}
+class ServerConnection : public std::enable_shared_from_this<ServerConnection>, boost::noncopyable {
+    ServerConnection(boost::asio::io_service& service, RoomsMap& rooms, boost::uuids::random_generator& generator) : sock_(service), started_(false), rooms_(rooms), random_generator_(generator) {}
 public:
-    typedef std::shared_ptr<serverConnection> ptr;
+    using ServerPointer = std::shared_ptr<ServerConnection>;
 
     void start() {
         started_ = true;
         do_read();
     }
-    static ptr create(boost::asio::io_service& service, RoomsMap& rooms, boost::uuids::random_generator& generator) {
-        ptr new_client(new serverConnection(service, rooms, generator));
+    static ServerPointer create(boost::asio::io_service& service, RoomsMap& rooms, boost::uuids::random_generator& generator) {
+        ServerPointer new_client(new ServerConnection(service, rooms, generator));
         return new_client;
     }
     void stop() {
@@ -36,7 +36,7 @@ public:
         started_ = false;
         sock_.close();
 
-        ptr self = shared_from_this();
+        ServerPointer self = shared_from_this();
         auto it = rooms_.find(room_id_);
         if (it != rooms_.end()) {
             auto it2 = std::find(it->second.begin(), it->second.end(), self);
@@ -145,10 +145,10 @@ private:
     boost::uuids::random_generator& random_generator_;
 };
 
-void handle_accept(serverConnection::ptr client, const boost::system::error_code & err, boost::asio::ip::tcp::acceptor& acceptor, boost::asio::io_service& service, RoomsMap& rooms, boost::uuids::random_generator& generator) {
+void handle_accept(ServerConnection::ServerPointer client, const boost::system::error_code & err, boost::asio::ip::tcp::acceptor& acceptor, boost::asio::io_service& service, RoomsMap& rooms, boost::uuids::random_generator& generator) {
     spdlog::get("logger")->info("Handling accept");
     client->start();
-    serverConnection::ptr new_client = serverConnection::create(service, rooms, generator);
+    ServerConnection::ServerPointer new_client = ServerConnection::create(service, rooms, generator);
     acceptor.async_accept(new_client->sock(), [client = new_client, &acceptor = acceptor, &service = service, &rooms = rooms, &generator = generator]
     (const boost::system::error_code & err){ handle_accept(client, err, acceptor, service, rooms, generator);});
 }
@@ -161,7 +161,7 @@ int main(int argc, char* argv[]) {
     boost::asio::ip::tcp::acceptor acceptor(service, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), 8001));
 
     logger->info("Server started");
-    serverConnection::ptr client = serverConnection::create(service, rooms, random_generator_);
+    ServerConnection::ServerPointer client = ServerConnection::create(service, rooms, random_generator_);
     acceptor.async_accept(client->sock(), [client = client, &acceptor = acceptor, &service = service, &rooms = rooms, &generator = random_generator_]
     (const boost::system::error_code & err){ handle_accept(client, err, acceptor, service, rooms, generator);});
     service.run();

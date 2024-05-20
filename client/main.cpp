@@ -11,8 +11,8 @@
 #include "message.h"
 #include "user_interaction.cpp"
 
-class clientConnection : public std::enable_shared_from_this<clientConnection>, boost::noncopyable {
-    explicit clientConnection(std::string& username, boost::asio::io_service& service)
+class ClientConnection : public std::enable_shared_from_this<ClientConnection>, boost::noncopyable {
+    explicit ClientConnection(std::string& username, boost::asio::io_service& service)
             : sock_(service), started_(true), input_stream_(service, STDIN_FILENO), username_(username) {}
 
     void start(const boost::asio::ip::tcp::endpoint& ep) {
@@ -23,10 +23,10 @@ class clientConnection : public std::enable_shared_from_this<clientConnection>, 
 
 public:
     using ErrorCode = boost::system::error_code;
-    using ClientPtr = std::shared_ptr<clientConnection>;
+    using ClientPtr = std::shared_ptr<ClientConnection>;
 
     static ClientPtr create(const boost::asio::ip::tcp::endpoint& ep, std::string& username, boost::asio::io_service& service) {
-        ClientPtr new_(new clientConnection(username, service));
+        ClientPtr new_(new ClientConnection(username, service));
         new_->start(ep);
         return new_;
     }
@@ -198,7 +198,7 @@ int main(int argc, char* argv[]) {
 
     std::string username = primitives::get_user_input(std::cin, std::cout, "Enter your username\n");
     boost::asio::ip::tcp::endpoint ep( boost::asio::ip::address::from_string("127.0.0.1"), 8001);
-    clientConnection::create(ep, username, service);
+    ClientConnection::create(ep, username, service);
 
     service.run();
 }
