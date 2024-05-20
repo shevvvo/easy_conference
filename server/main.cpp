@@ -1,15 +1,14 @@
 #include <boost/asio.hpp>
-#include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp> 
 #include <iostream>
 #include <boost/noncopyable.hpp>
-#include <nlohmann/json.hpp>
 #include <unordered_map>
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include "message.h"
-#include "user_interaction.h"
+#include "deserialize_tools.h"
+#include "serialize_tools.h"
 
 class ServerConnection;
 using ClientPtr = std::shared_ptr<ServerConnection>;
@@ -53,9 +52,9 @@ private:
         if ( err) stop();
         if ( !started() ) return;
         if (!bytes) return;
-        nlohmann::json req = nlohmann::json::parse(std::string(read_buffer_, bytes - 1));
-        auto req_struct = req.template get<primitives::NetworkMessage>();
-        spdlog::get("logger")->info("Read the message: " + req.dump());
+        std::string req_str = std::string(read_buffer_, bytes - 1);
+        auto req_struct = primitives::deserialize_json(std::forward<std::string>(req_str));
+        spdlog::get("logger")->info("Read the message: " + req_str);
 
         switch (req_struct.command) {
             case primitives::Command::CMD_JOIN: {
@@ -64,16 +63,14 @@ private:
                 if (it != rooms_.end()) {
                     room_id_ = id;
                     it->second.push_back(shared_from_this());
-                    primitives::NetworkMessage answer = {primitives::Command::CMD_JOIN, "", "success"};
-                    auto dump = nlohmann::json(answer).dump() + "\e";
+                    auto answer = primitives::serialize_json({primitives::Command::CMD_JOIN, "", "success"});
                     username_ = req_struct.user;
-                    sock_.async_write_some(boost::asio::buffer(dump, dump.size()),
+                    sock_.async_write_some(boost::asio::buffer(answer, answer.size()),
                                            [shared_this = shared_from_this()](const ErrorCode&err, size_t bytes) {shared_this->on_write(err, bytes);});
 
                 } else {
-                    primitives::NetworkMessage answer = {primitives::Command::CMD_JOIN, "", "fail"};
-                    auto dump = nlohmann::json(answer).dump() + "\e";
-                    sock_.async_write_some(boost::asio::buffer(dump, dump.size()),
+                    auto answer = primitives::serialize_json({primitives::Command::CMD_JOIN, "", "fail"});
+                    sock_.async_write_some(boost::asio::buffer(answer, answer.size()),
                                            [shared_this = shared_from_this()](const ErrorCode&err, size_t bytes) {shared_this->on_write(err, bytes);});
                 }
                 break;
@@ -82,10 +79,9 @@ private:
                 room_id_ = boost::uuids::to_string(random_generator_());
                 std::vector<ClientPtr> vec{ shared_from_this() };
                 rooms_.insert_or_assign(room_id_, vec);
-                primitives::NetworkMessage answer = {primitives::Command::CMD_CREATE, "", room_id_};
-                auto dump = nlohmann::json(answer).dump() + "\e";
+                auto answer = primitives::serialize_json({primitives::Command::CMD_CREATE, "", room_id_});
                 username_ = req_struct.user;
-                sock_.async_write_some(boost::asio::buffer(dump, dump.size()),
+                sock_.async_write_some(boost::asio::buffer(answer, answer.size()),
                                        [shared_this = shared_from_this()](const ErrorCode& err, size_t bytes) {shared_this->on_write(err, bytes);});
                 break;
             }
@@ -96,7 +92,7 @@ private:
                         for (auto& elem : it->second) {
                             std::string nmm = elem->getUsername();
                             if (elem->getUsername() != username_) {
-                                std::string dump = req.dump() + "\e";
+                                std::string dump = req_str + "\e";
                                 elem->sock().async_write_some(boost::asio::buffer(dump, dump.size()),
                                                               [shared_this = shared_from_this()](const ErrorCode&err,size_t bytes) {shared_this->on_write(err, bytes); });
                             }

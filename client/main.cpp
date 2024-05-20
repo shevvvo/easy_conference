@@ -1,7 +1,5 @@
 #include <boost/thread.hpp>
 #include <boost/asio.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/enable_shared_from_this.hpp>
 #include <iostream>
 #include <boost/noncopyable.hpp>
 #include <nlohmann/json.hpp>
@@ -10,6 +8,8 @@
 #include <memory>
 #include "message.h"
 #include "user_interaction.h"
+#include "deserialize_tools.h"
+#include "serialize_tools.h"
 
 class ClientConnection : public std::enable_shared_from_this<ClientConnection>, boost::noncopyable {
     using ErrorCode = boost::system::error_code;
@@ -49,18 +49,16 @@ private:
         primitives::Command opt = primitives::get_user_command(std::cin, std::cout, "Choose option:\n1. Create new room\n2. Join existing room\n");
         switch (opt) {
             case primitives::Command::CMD_CREATE: {
-                primitives::NetworkMessage new_msg = {primitives::Command::CMD_CREATE, username_, ""};
-                auto dump = nlohmann::json(new_msg).dump() + "\e";
-                sock_.async_write_some( boost::asio::buffer(dump, dump.size()),[shared_this = shared_from_this()](const ErrorCode& err, size_t bytes) {
+                auto req = primitives::serialize_json({primitives::Command::CMD_CREATE, username_, ""});
+                sock_.async_write_some( boost::asio::buffer(req, req.size()),[shared_this = shared_from_this()](const ErrorCode& err, size_t bytes) {
                     shared_this->on_create_sent(err, bytes);
                 });
                 break;
             }
             case primitives::Command::CMD_JOIN: {
                 std::string chat_id = primitives::get_user_input(std::cin, std::cout, "Enter chat id: ");
-                primitives::NetworkMessage new_msg = {primitives::Command::CMD_JOIN, username_, chat_id};
-                auto dump = nlohmann::json(new_msg).dump() + "\e";
-                sock_.async_write_some( boost::asio::buffer(dump, dump.size()),[shared_this = shared_from_this()](const ErrorCode& err, size_t bytes) {
+                auto req = primitives::serialize_json({primitives::Command::CMD_JOIN, username_, chat_id});
+                sock_.async_write_some( boost::asio::buffer(req, req.size()),[shared_this = shared_from_this()](const ErrorCode& err, size_t bytes) {
                     shared_this->on_join_sent(err, bytes);
                 });
                 break;
@@ -83,8 +81,7 @@ private:
         if (err) {
             stop();
         }
-        nlohmann::json answer = nlohmann::json::parse(std::string(read_buffer_, bytes - 1));
-        auto new_msg = answer.template get<primitives::NetworkMessage>();
+        auto new_msg = primitives::deserialize_json(std::string(read_buffer_, bytes - 1));
         if (new_msg.command == primitives::Command::CMD_CREATE) {
             if (!new_msg.data.empty()) {
                 spdlog::get("logger")->info("New room created: " + new_msg.data);
@@ -110,8 +107,7 @@ private:
         if (err) {
             stop();
         }
-        nlohmann::json answer = nlohmann::json::parse(std::string(read_buffer_, bytes - 1));
-        auto new_msg = answer.template get<primitives::NetworkMessage>();
+        auto new_msg = primitives::deserialize_json(std::string(read_buffer_, bytes - 1));
         if (new_msg.command == primitives::Command::CMD_JOIN) {
             if (new_msg.data == "success") {
                 read_from_input();
@@ -130,8 +126,7 @@ private:
         if (!started()) {
             return;
         }
-        nlohmann::json answer = nlohmann::json::parse(std::string(read_buffer_, bytes - 1));
-        spdlog::get("logger")->info(answer.dump());
+        spdlog::get("logger")->info(std::string(read_buffer_, bytes - 1));
         read_from_socket();
     }
 
@@ -152,9 +147,8 @@ private:
         if (!started()) {
             return;
         }
-        primitives::NetworkMessage new_msg = {primitives::Command::CMD_MESSAGE, username_, std::string(input_buffer_, bytes)};
-        auto dump = nlohmann::json(new_msg).dump() + "\e";
-        sock_.async_write_some( boost::asio::buffer(dump, dump.size()),
+        auto req = primitives::serialize_json({primitives::Command::CMD_MESSAGE, username_, std::string(input_buffer_, bytes)});
+        sock_.async_write_some( boost::asio::buffer(req, req.size()),
                                 [shared_this = shared_from_this()](const ErrorCode& err, size_t bytes) {shared_this->on_write(err, bytes);});
     }
 

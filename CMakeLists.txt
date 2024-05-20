@@ -21,7 +21,7 @@ project(
         HOMEPAGE_URL "TODO"
         LANGUAGES C CXX)
 
-add_library(primitives STATIC primitives/src/user_interaction.cpp)
+add_library(primitives STATIC primitives/src/user_interaction.cpp primitives/src/deserialize_tools.cpp primitives/src/serialize_tools.cpp)
 target_include_directories(primitives PUBLIC ${PROJECT_SOURCE_DIR}/primitives/include)
 
 add_executable(hard-coding-server server/main.cpp)
