@@ -21,11 +21,8 @@ project(
         HOMEPAGE_URL "TODO"
         LANGUAGES C CXX)
 
-include_directories(${PROJECT_SOURCE_DIR}/primitives/include)
-include_directories(${PROJECT_SOURCE_DIR}/primitives/src)
-
-add_library(primitives STATIC primitives/include/message.h primitives/include/user_interaction.h primitives/src/user_interaction.cpp)
-set_target_properties(primitives PROPERTIES LINKER_LANGUAGE CXX)
+add_library(primitives STATIC primitives/src/user_interaction.cpp)
+target_include_directories(primitives PUBLIC ${PROJECT_SOURCE_DIR}/primitives/include)
 
 add_executable(hard-coding-server server/main.cpp)
 add_executable(hard-coding-client client/main.cpp)

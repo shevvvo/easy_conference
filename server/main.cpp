@@ -9,7 +9,7 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include "message.h"
-#include "user_interaction.cpp"
+#include "user_interaction.h"
 
 class ServerConnection;
 using ClientPtr = std::shared_ptr<ServerConnection>;

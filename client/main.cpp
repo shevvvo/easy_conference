@@ -9,7 +9,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <memory>
 #include "message.h"
-#include "user_interaction.cpp"
+#include "user_interaction.h"
 
 class ClientConnection : public std::enable_shared_from_this<ClientConnection>, boost::noncopyable {
     using ErrorCode = boost::system::error_code;
