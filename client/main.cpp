@@ -45,7 +45,7 @@ private:
         if (err) {
             stop();
         }
-        spdlog::get("logger")->info("Connected");
+        logger_->info("Connected");
         primitives::Command opt = primitives::get_user_command(std::cin, std::cout, "Choose option:\n1. Create new room\n2. Join existing room\n");
         switch (opt) {
             case primitives::Command::CMD_CREATE: {
@@ -84,11 +84,11 @@ private:
         auto new_msg = primitives::deserialize_json(std::string(read_buffer_, bytes - 1));
         if (new_msg.command == primitives::Command::CMD_CREATE) {
             if (!new_msg.data.empty()) {
-                spdlog::get("logger")->info("New room created: " + new_msg.data);
+                logger_->info("New room created: " + new_msg.data);
                 read_from_input();
                 read_from_socket();
             } else {
-                spdlog::get("logger")->info("Failed to create new room");
+                logger_->info("Failed to create new room");
                 stop();
             }
         }
@@ -103,7 +103,7 @@ private:
     }
 
     void on_join_read(const ErrorCode& err, size_t bytes) {
-        spdlog::get("logger")->info("Join read " + std::string(read_buffer_, bytes - 1));
+        logger_->info("Join read " + std::string(read_buffer_, bytes - 1));
         if (err) {
             stop();
         }
@@ -113,7 +113,7 @@ private:
                 read_from_input();
                 read_from_socket();
             } else {
-                spdlog::get("logger")->info("Failed to join");
+                logger_->info("Failed to join");
                 stop();
             }
         }
@@ -126,7 +126,7 @@ private:
         if (!started()) {
             return;
         }
-        spdlog::get("logger")->info(std::string(read_buffer_, bytes - 1));
+        logger_->info(std::string(read_buffer_, bytes - 1));
         read_from_socket();
     }
 
