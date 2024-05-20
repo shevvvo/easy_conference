@@ -2,10 +2,8 @@
 #include <iostream>
 
 namespace primitives {
-    Command get_user_command(std::istream& in) {
-        std::cout << "Choose option:\n";
-        std::cout << "1. Create new room\n";
-        std::cout << "2. Join existing room\n";
+    Command get_user_command(std::istream& in, std::ostream& out, std::string message) {
+        out << message;
         int opt;
         in >> opt;
         return static_cast<Command>(opt);

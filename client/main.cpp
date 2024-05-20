@@ -12,8 +12,12 @@
 #include "user_interaction.cpp"
 
 class ClientConnection : public std::enable_shared_from_this<ClientConnection>, boost::noncopyable {
-    explicit ClientConnection(std::string& username, boost::asio::io_service& service)
-            : sock_(service), started_(true), input_stream_(service, STDIN_FILENO), username_(username) {}
+    using ErrorCode = boost::system::error_code;
+    using ClientPtr = std::shared_ptr<ClientConnection>;
+    using Logger = std::shared_ptr<spdlog::logger>;
+
+    explicit ClientConnection(std::string& username, boost::asio::io_service& service, Logger& logger)
+            : sock_(service), started_(true), input_stream_(service, STDIN_FILENO), username_(username), logger_(logger) {}
 
     void start(const boost::asio::ip::tcp::endpoint& ep) {
         sock_.async_connect(ep, [shared_this = shared_from_this()](const ErrorCode& err) {
@@ -22,11 +26,9 @@ class ClientConnection : public std::enable_shared_from_this<ClientConnection>, 
     }
 
 public:
-    using ErrorCode = boost::system::error_code;
-    using ClientPtr = std::shared_ptr<ClientConnection>;
 
-    static ClientPtr create(const boost::asio::ip::tcp::endpoint& ep, std::string& username, boost::asio::io_service& service) {
-        ClientPtr new_(new ClientConnection(username, service));
+    static ClientPtr create(const boost::asio::ip::tcp::endpoint& ep, std::string& username, boost::asio::io_service& service, Logger& logger) {
+        ClientPtr new_(new ClientConnection(username, service, logger));
         new_->start(ep);
         return new_;
     }
@@ -44,7 +46,7 @@ private:
             stop();
         }
         spdlog::get("logger")->info("Connected");
-        primitives::Command opt = primitives::get_user_command(std::cin);
+        primitives::Command opt = primitives::get_user_command(std::cin, std::cout, "Choose option:\n1. Create new room\n2. Join existing room\n");
         switch (opt) {
             case primitives::Command::CMD_CREATE: {
                 primitives::NetworkMessage new_msg = {primitives::Command::CMD_CREATE, username_, ""};
@@ -190,6 +192,7 @@ private:
     char input_buffer_[max_msg];
     bool started_;
     std::string username_;
+    Logger& logger_;
 };
 
 int main(int argc, char* argv[]) {
@@ -198,7 +201,7 @@ int main(int argc, char* argv[]) {
 
     std::string username = primitives::get_user_input(std::cin, std::cout, "Enter your username\n");
     boost::asio::ip::tcp::endpoint ep( boost::asio::ip::address::from_string("127.0.0.1"), 8001);
-    ClientConnection::create(ep, username, service);
+    ClientConnection::create(ep, username, service, logger);
 
     service.run();
 }
