@@ -19,7 +19,7 @@ class ClientConnection
     using Logger = std::shared_ptr<spdlog::logger>;
 
     explicit ClientConnection(std::string& username, boost::asio::io_service& service, Logger& logger)
-        : sock_(service), started_(true), input_stream_(service, STDIN_FILENO), username_(username), logger_(logger) {}
+        : sock_(service), input_stream_(service, STDIN_FILENO), started_(true), username_(username), logger_(logger) {}
 
     void start(const boost::asio::ip::tcp::endpoint& ep) {
         sock_.async_connect(ep, [shared_this = shared_from_this()](const ErrorCode& err) {
@@ -63,8 +63,8 @@ private:
             auto req = primitives::serialize_json({ primitives::Command::CMD_CREATE, username_, "" });
             sock_.async_write_some(
                 boost::asio::buffer(req, req.size()),
-                [shared_this = shared_from_this()](const ErrorCode& err, size_t bytes) {
-                    shared_this->on_create_sent(err, bytes);
+                [shared_this = shared_from_this()](const ErrorCode& err_, size_t bytes) {
+                    shared_this->on_create_sent(err_, bytes);
                 }
             );
             break;
@@ -74,8 +74,8 @@ private:
             auto req = primitives::serialize_json({ primitives::Command::CMD_JOIN, username_, chat_id });
             sock_.async_write_some(
                 boost::asio::buffer(req, req.size()),
-                [shared_this = shared_from_this()](const ErrorCode& err, size_t bytes) {
-                    shared_this->on_join_sent(err, bytes);
+                [shared_this = shared_from_this()](const ErrorCode& err_, size_t bytes) {
+                    shared_this->on_join_sent(err_, bytes);
                 }
             );
             break;
@@ -86,18 +86,18 @@ private:
         }
     }
 
-    void on_create_sent(const ErrorCode& err, size_t bytes) {
+    void on_create_sent(const ErrorCode& err, [[maybe_unused]] size_t bytes) {
         if (err) {
             stop();
         }
         async_read(
             sock_,
             boost::asio::buffer(read_buffer_),
-            [shared_this = shared_from_this()](const boost::system::error_code& err, size_t bytes) {
-                return shared_this->read_complete(err, bytes);
+            [shared_this = shared_from_this()](const boost::system::error_code& err_, size_t bytes_) {
+                return shared_this->read_complete(err_, bytes_);
             },
-            [shared_this = shared_from_this()](const ErrorCode& err, size_t bytes) {
-                shared_this->on_create_read(err, bytes);
+            [shared_this = shared_from_this()](const ErrorCode& err_, size_t bytes_) {
+                shared_this->on_create_read(err_, bytes_);
             }
         );
     }
@@ -119,18 +119,18 @@ private:
         }
     }
 
-    void on_join_sent(const ErrorCode& err, size_t bytes) {
+    void on_join_sent(const ErrorCode& err, [[maybe_unused]] size_t bytes) {
         if (err) {
             stop();
         }
         async_read(
             sock_,
             boost::asio::buffer(read_buffer_),
-            [shared_this = shared_from_this()](const boost::system::error_code& err, size_t bytes) {
-                return shared_this->read_complete(err, bytes);
+            [shared_this = shared_from_this()](const boost::system::error_code& err_, size_t bytes_) {
+                return shared_this->read_complete(err_, bytes_);
             },
-            [shared_this = shared_from_this()](const ErrorCode& err, size_t bytes) {
-                shared_this->on_join_read(err, bytes);
+            [shared_this = shared_from_this()](const ErrorCode& err_, size_t bytes_) {
+                shared_this->on_join_read(err_, bytes_);
             }
         );
     }
@@ -163,7 +163,7 @@ private:
         read_from_socket();
     }
 
-    void on_write(const ErrorCode& err, size_t bytes) {
+    void on_write(const ErrorCode& err, [[maybe_unused]] size_t bytes) {
         if (err) {
             stop();
         }
@@ -185,8 +185,8 @@ private:
         );
         sock_.async_write_some(
             boost::asio::buffer(req, req.size()),
-            [shared_this = shared_from_this()](const ErrorCode& err, size_t bytes) {
-                shared_this->on_write(err, bytes);
+            [shared_this = shared_from_this()](const ErrorCode& err_, size_t bytes_) {
+                shared_this->on_write(err_, bytes_);
             }
         );
     }
@@ -195,7 +195,7 @@ private:
         if (err) {
             return 0;
         }
-        bool found = std::find(read_buffer_, read_buffer_ + bytes, '\e') < read_buffer_ + bytes;
+        bool found = std::find(read_buffer_, read_buffer_ + bytes, '\r') < read_buffer_ + bytes;
         return found ? 0 : 1;
     }
 
@@ -242,7 +242,7 @@ private:
     Logger& logger_;
 };
 
-int main(int argc, char* argv[]) {
+int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
     auto logger = spdlog::stdout_color_mt("logger");
     boost::asio::io_service service;
 

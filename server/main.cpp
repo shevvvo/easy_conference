@@ -85,8 +85,8 @@ private:
                 username_ = req_struct.user;
                 sock_.async_write_some(
                     boost::asio::buffer(answer, answer.size()),
-                    [shared_this = shared_from_this()](const ErrorCode& err, size_t bytes) {
-                        shared_this->on_write(err, bytes);
+                    [shared_this = shared_from_this()](const ErrorCode& err_, size_t bytes_) {
+                        shared_this->on_write(err_, bytes_);
                     }
                 );
 
@@ -94,8 +94,8 @@ private:
                 auto answer = primitives::serialize_json({ primitives::Command::CMD_JOIN, "", "fail" });
                 sock_.async_write_some(
                     boost::asio::buffer(answer, answer.size()),
-                    [shared_this = shared_from_this()](const ErrorCode& err, size_t bytes) {
-                        shared_this->on_write(err, bytes);
+                    [shared_this = shared_from_this()](const ErrorCode& err_, size_t bytes_) {
+                        shared_this->on_write(err_, bytes_);
                     }
                 );
             }
@@ -109,8 +109,8 @@ private:
             username_ = req_struct.user;
             sock_.async_write_some(
                 boost::asio::buffer(answer, answer.size()),
-                [shared_this = shared_from_this()](const ErrorCode& err, size_t bytes) {
-                    shared_this->on_write(err, bytes);
+                [shared_this = shared_from_this()](const ErrorCode& err_, size_t bytes_) {
+                    shared_this->on_write(err_, bytes_);
                 }
             );
             break;
@@ -122,11 +122,11 @@ private:
                     for (auto& elem : it->second) {
                         std::string nmm = elem->getUsername();
                         if (elem->getUsername() != username_) {
-                            std::string dump = req_str + "\e";
+                            std::string dump = req_str + "\r";
                             elem->sock().async_write_some(
                                 boost::asio::buffer(dump, dump.size()),
-                                [shared_this = shared_from_this()](const ErrorCode& err, size_t bytes) {
-                                    shared_this->on_write(err, bytes);
+                                [shared_this = shared_from_this()](const ErrorCode& err_, size_t bytes_) {
+                                    shared_this->on_write(err_, bytes_);
                                 }
                             );
                         }
@@ -142,7 +142,7 @@ private:
         do_read();
     }
 
-    void on_write(const ErrorCode& err, size_t bytes) {
+    void on_write(const ErrorCode& err, [[maybe_unused]] size_t bytes) {
         if (err) {
             stop();
         }
@@ -178,7 +178,7 @@ private:
         if (err) {
             return 0;
         }
-        bool found = std::find(read_buffer_, read_buffer_ + bytes, '\e') < read_buffer_ + bytes;
+        bool found = std::find(read_buffer_, read_buffer_ + bytes, '\r') < read_buffer_ + bytes;
         return found ? 0 : 1;
     }
 
@@ -197,7 +197,7 @@ private:
 
 void handle_accept(
     ServerPointer client,
-    const boost::system::error_code& err,
+    [[maybe_unused]] const boost::system::error_code& err,
     boost::asio::ip::tcp::acceptor& acceptor,
     boost::asio::io_service& service,
     RoomsMap& rooms,
@@ -214,13 +214,13 @@ void handle_accept(
          &service = service,
          &rooms = rooms,
          &generator = generator,
-         &logger = logger](const boost::system::error_code& err) {
-            handle_accept(client, err, acceptor, service, rooms, generator, logger);
+         &logger = logger](const boost::system::error_code& err_) {
+            handle_accept(client, err_, acceptor, service, rooms, generator, logger);
         }
     );
 }
 
-int main(int argc, char* argv[]) {
+int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
     RoomsMap rooms;
     boost::asio::io_service service;
     boost::uuids::random_generator random_generator_;

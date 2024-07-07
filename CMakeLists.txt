@@ -21,12 +21,8 @@ project(
         HOMEPAGE_URL "TODO"
         LANGUAGES C CXX)
 
-add_library(primitives STATIC primitives/src/user_interaction.cpp primitives/src/deserialize_tools.cpp primitives/src/serialize_tools.cpp)
-target_include_directories(primitives PUBLIC ${PROJECT_SOURCE_DIR}/primitives/include)
-
-add_executable(hard-coding-server server/main.cpp)
-add_executable(hard-coding-client client/main.cpp)
-
+add_library(${PROJECT_NAME} STATIC primitives/src/user_interaction.cpp primitives/src/deserialize_tools.cpp primitives/src/serialize_tools.cpp)
+target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/primitives/include)
 
 cpmaddpackage(
         NAME boost
@@ -49,13 +45,17 @@ cpmaddpackage(
         GIT_REPOSITORY "git@github.com:jeremy-rifkin/libassert.git"
         GIT_TAG v2.0.2)
 
-target_link_libraries(primitives nlohmann_json::nlohmann_json)
-target_link_libraries(hard-coding-server PRIVATE Boost::system Boost::asio spdlog::spdlog libassert::assert primitives)
-target_link_libraries(hard-coding-client PRIVATE Boost::system Boost::asio spdlog::spdlog libassert::assert primitives)
+add_executable(hard-coding-server server/main.cpp)
+add_executable(hard-coding-client client/main.cpp)
+
+sl_target_link_system_libraries(${PROJECT_NAME} PUBLIC nlohmann_json::nlohmann_json)
+sl_target_link_system_libraries(hard-coding-server PRIVATE Boost::system Boost::asio spdlog::spdlog libassert::assert ${PROJECT_NAME})
+sl_target_link_system_libraries(hard-coding-client PRIVATE Boost::system Boost::asio spdlog::spdlog libassert::assert ${PROJECT_NAME})
 
 if (NOT PROJECT_IS_TOP_LEVEL)
     return()
 endif ()
 
+sl_compiler_warnings(${PROJECT_NAME} WARNINGS_AS_ERRORS)
 sl_compiler_warnings(hard-coding-server WARNINGS_AS_ERRORS)
 sl_compiler_warnings(hard-coding-client WARNINGS_AS_ERRORS)
