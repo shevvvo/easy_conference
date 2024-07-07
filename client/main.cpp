@@ -55,8 +55,9 @@ private:
             stop();
         }
         logger_->info("Connected");
-        primitives::Command opt = primitives::get_user_command(
-            std::cin, std::cout, "Choose option:\n1. Create new room\n2. Join existing room\n"
+        primitives::Command opt{};
+        primitives::get_user_input(
+            std::cin, std::cout, "Choose option:\n1. Create new room\n2. Join existing room\n", opt
         );
         switch (opt) {
         case primitives::Command::CMD_CREATE: {
@@ -70,7 +71,8 @@ private:
             break;
         }
         case primitives::Command::CMD_JOIN: {
-            std::string chat_id = primitives::get_user_input(std::cin, std::cout, "Enter chat id: ");
+            std::string chat_id{};
+            primitives::get_user_input(std::cin, std::cout, "Enter chat id: ", chat_id);
             auto req = primitives::serialize_json({ primitives::Command::CMD_JOIN, username_, chat_id });
             sock_.async_write_some(
                 boost::asio::buffer(req, req.size()),
@@ -246,7 +248,8 @@ int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
     auto logger = spdlog::stdout_color_mt("logger");
     boost::asio::io_service service;
 
-    std::string username = primitives::get_user_input(std::cin, std::cout, "Enter your username\n");
+    std::string username{};
+    primitives::get_user_input(std::cin, std::cout, "Enter your username\n", username);
     boost::asio::ip::tcp::endpoint ep(boost::asio::ip::address::from_string("127.0.0.1"), 8001);
     ClientConnection::create(ep, username, service, logger);
 

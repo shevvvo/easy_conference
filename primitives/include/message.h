@@ -29,4 +29,10 @@ struct NetworkMessage {
 NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(NetworkMessage, command, user, data)
 } // namespace primitives
 
+inline std::istream& operator>>(std::istream& input, primitives::Command& cmd) {
+    int result;
+    input >> result;
+    cmd = static_cast<primitives::Command>(result);
+}
+
 #endif // HARD_CODING_MESSAGE_H

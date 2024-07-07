@@ -21,7 +21,7 @@ project(
         HOMEPAGE_URL "TODO"
         LANGUAGES C CXX)
 
-add_library(${PROJECT_NAME} STATIC primitives/src/user_interaction.cpp primitives/src/deserialize_tools.cpp primitives/src/serialize_tools.cpp)
+add_library(${PROJECT_NAME} STATIC primitives/src/deserialize_tools.cpp primitives/src/serialize_tools.cpp)
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/primitives/include)
 
 cpmaddpackage(

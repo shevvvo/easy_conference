@@ -6,9 +6,11 @@
 #include <string>
 
 namespace primitives {
-Command get_user_command(std::istream& in, std::ostream& out, std::string message);
-
-std::string get_user_input(std::istream& in, std::ostream& out, std::string message);
+template <typename InputStream, typename OutputStream, typename MessageType>
+void get_user_input(InputStream& in, OutputStream& out, std::string message, MessageType user_input) {
+    out << message;
+    in >> user_input;
+}
 } // namespace primitives
 
 #endif // HARD_CODING_USER_INTERACTION_H
