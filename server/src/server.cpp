@@ -151,7 +151,7 @@ void EasyServer::handle_accept(const std::shared_ptr<EasyServer>& client, [[mayb
                                boost::asio::ip::tcp::acceptor& acceptor, boost::asio::io_service& service,
                                std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms,
                                boost::uuids::random_generator& generator, std::shared_ptr<spdlog::logger>& logger) {
-    spdlog::get("logger")->info("Handling accept");
+    logger->info("Handling accept");
     client->start();
     std::shared_ptr<EasyServer> new_client = EasyServer::create(service, rooms, generator, logger);
     acceptor.async_accept(
