@@ -1,5 +1,4 @@
-#ifndef HARD_CODING_SERVER_H
-#define HARD_CODING_SERVER_H
+#pragma once
 
 #include "deserialize_tools.h"
 #include "message.h"
@@ -66,5 +65,3 @@ void handle_accept(std::shared_ptr<EasyServer> client, [[maybe_unused]] const bo
                    boost::asio::io_service& service,std::unordered_map<std::string, std::vector<EasyServer>>& rooms,
                    boost::uuids::random_generator& generator,std::shared_ptr<spdlog::logger>& logger
 );
-
-#endif // HARD_CODING_SERVER_H

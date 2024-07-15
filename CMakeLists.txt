@@ -21,8 +21,8 @@ project(
         HOMEPAGE_URL "TODO"
         LANGUAGES C CXX)
 
-add_library(${PROJECT_NAME} STATIC primitives/src/deserialize_tools.cpp primitives/src/serialize_tools.cpp server/src/server.cpp)
-target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/primitives/include ${PROJECT_SOURCE_DIR}/server/include)
+add_library(${PROJECT_NAME} STATIC primitives/src/deserialize_tools.cpp primitives/src/serialize_tools.cpp server/src/server.cpp client/src/client.cpp)
+target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/primitives/include ${PROJECT_SOURCE_DIR}/server/include client/include)
 sl_target_link_system_libraries(${PROJECT_NAME} PRIVATE Boost::system Boost::asio spdlog::spdlog libassert::assert)
 
 add_subdirectory(dependencies)
