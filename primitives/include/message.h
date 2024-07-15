@@ -33,6 +33,7 @@ inline std::istream& operator>>(std::istream& input, primitives::Command& cmd) {
     int result;
     input >> result;
     cmd = static_cast<primitives::Command>(result);
+    return input;
 }
 
 #endif // HARD_CODING_MESSAGE_H

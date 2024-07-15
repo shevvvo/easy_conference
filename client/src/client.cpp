@@ -170,7 +170,7 @@ size_t EasyClient::read_complete(const boost::system::error_code& err, size_t by
     if (err) {
         return 0;
     }
-    bool found = std::find(read_buffer_, read_buffer_ + bytes, '\r') < read_buffer_ + bytes;
+    bool found = std::find(read_buffer_, read_buffer_ + bytes, '\n') < read_buffer_ + bytes;
     return found ? 0 : 1;
 }
 

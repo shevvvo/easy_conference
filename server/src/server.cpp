@@ -92,7 +92,7 @@ void EasyServer::on_read(const boost::system::error_code& err, size_t bytes) {
             if (elem->getUsername() == username_) {
                 continue;
             }
-            std::string dump = req_str + "\r";
+            std::string dump = req_str + "\n";
             elem->getSocket().async_write_some(
                 boost::asio::buffer(dump, dump.size()),
                 [shared_this = shared_from_this()](const boost::system::error_code& err_, size_t bytes_) {
@@ -143,7 +143,7 @@ size_t EasyServer::read_complete(const boost::system::error_code& err, size_t by
     if (err) {
         return 0;
     }
-    bool found = std::find(read_buffer_, read_buffer_ + bytes, '\r') < read_buffer_ + bytes;
+    bool found = std::find(read_buffer_, read_buffer_ + bytes, '\n') < read_buffer_ + bytes;
     return found ? 0 : 1;
 }
 
