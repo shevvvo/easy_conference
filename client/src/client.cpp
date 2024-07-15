@@ -1,4 +1,5 @@
 #include "client.h"
+#include "message.h"
 
 EasyClient::EasyClient(std::string& username, boost::asio::io_service& service, std::shared_ptr<spdlog::logger>& logger)
     : sock_(service), input_stream_(service, STDIN_FILENO), started_(true), username_(username), logger_(logger) {}
@@ -34,7 +35,11 @@ void EasyClient::on_connect(const boost::system::error_code& err) {
     );
     switch (opt) {
     case primitives::Command::CMD_CREATE: {
-        auto req = primitives::serialize_json({ primitives::Command::CMD_CREATE, username_, "" });
+        auto req = primitives::serialize_json(primitives::NetworkMessage {
+            .command = primitives::Command::CMD_CREATE,
+            .user = username_,
+            .data = ""
+        });
         sock_.async_write_some(
             boost::asio::buffer(req, req.size()),
             [shared_this = shared_from_this()](const boost::system::error_code& err_, size_t bytes) {
@@ -46,7 +51,11 @@ void EasyClient::on_connect(const boost::system::error_code& err) {
     case primitives::Command::CMD_JOIN: {
         std::string chat_id{};
         primitives::get_user_input(std::cin, std::cout, "Enter chat id: ", chat_id);
-        auto req = primitives::serialize_json({ primitives::Command::CMD_JOIN, username_, chat_id });
+        auto req = primitives::serialize_json(primitives::NetworkMessage {
+            .command = primitives::Command::CMD_JOIN,
+            .user = username_,
+            .data = std::move(chat_id)
+        });
         sock_.async_write_some(
             boost::asio::buffer(req, req.size()),
             [shared_this = shared_from_this()](const boost::system::error_code& err_, size_t bytes) {
@@ -155,9 +164,11 @@ void EasyClient::do_write(const boost::system::error_code& err, size_t bytes) {
     if (!started()) {
         return;
     }
-    auto req = primitives::serialize_json(
-        { primitives::Command::CMD_MESSAGE, username_, std::string(input_buffer_, bytes) }
-    );
+    auto req = primitives::serialize_json(primitives::NetworkMessage {
+        .command = primitives::Command::CMD_MESSAGE,
+        .user = username_,
+        .data = std::string(input_buffer_, bytes)
+    });
     sock_.async_write_some(
         boost::asio::buffer(req, req.size()),
         [shared_this = shared_from_this()](const boost::system::error_code& err_, size_t bytes_) {
