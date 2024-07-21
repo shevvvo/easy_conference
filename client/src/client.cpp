@@ -91,15 +91,16 @@ void EasyClient::on_create_read(const boost::system::error_code& err, size_t byt
         stop();
     }
     auto new_msg = primitives::deserialize_json(std::string(read_buffer_, bytes - 1));
-    if (new_msg.command == primitives::Command::CMD_CREATE) {
-        if (!new_msg.data.empty()) {
-            logger_->info("New room created: " + new_msg.data);
-            read_from_input();
-            read_from_socket();
-        } else {
-            logger_->info("Failed to create new room");
-            stop();
-        }
+    if (new_msg.command != primitives::Command::CMD_CREATE) {
+        return;
+    }
+    if (!new_msg.data.empty()) {
+        logger_->info("New room created: " + new_msg.data);
+        read_from_input();
+        read_from_socket();
+    } else {
+        logger_->info("Failed to create new room");
+        stop();
     }
 }
 
