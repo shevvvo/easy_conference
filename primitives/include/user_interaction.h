@@ -1,5 +1,4 @@
-#ifndef HARD_CODING_USER_INTERACTION_H
-#define HARD_CODING_USER_INTERACTION_H
+#pragma once
 
 #include "message.h"
 #include <istream>
@@ -12,5 +11,3 @@ void get_user_input(InputStream& in, OutputStream& out, std::string_view message
     in >> user_input;
 }
 } // namespace primitives
-
-#endif // HARD_CODING_USER_INTERACTION_H

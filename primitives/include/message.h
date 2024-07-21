@@ -1,5 +1,4 @@
-#ifndef HARD_CODING_MESSAGE_H
-#define HARD_CODING_MESSAGE_H
+#pragma once
 
 #include <nlohmann/json.hpp>
 #include <string>
@@ -35,5 +34,3 @@ inline std::istream& operator>>(std::istream& input, primitives::Command& cmd) {
     cmd = static_cast<primitives::Command>(result);
     return input;
 }
-
-#endif // HARD_CODING_MESSAGE_H
