@@ -1,8 +1,8 @@
+#include "client.h"
 #include "user_interaction.h"
 #include <boost/asio.hpp>
 #include <iostream>
 #include <spdlog/sinks/stdout_color_sinks.h>
-#include "client.h"
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
     auto logger = spdlog::stdout_color_mt("logger");

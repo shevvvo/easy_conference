@@ -1,26 +1,32 @@
 #pragma once
 
-#include "deserialize_tools.h"
+#include "common_json.h"
 #include "message.h"
-#include "serialize_tools.h"
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <iostream>
+#include <memory>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 #include <unordered_map>
-#include <memory>
 
 class EasyServer : public std::enable_shared_from_this<EasyServer> {
-    EasyServer(boost::asio::io_service& service, std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms,
-               boost::uuids::random_generator& generator, std::shared_ptr<spdlog::logger>& logger);
+    EasyServer(
+        boost::asio::io_service& service,
+        std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms,
+        boost::uuids::random_generator& generator,
+        std::shared_ptr<spdlog::logger>& logger
+    );
 
 public:
-
-    static std::shared_ptr<EasyServer> create(boost::asio::io_service& service, std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms,
-                                              boost::uuids::random_generator& generator, std::shared_ptr<spdlog::logger>& logger);
+    static std::shared_ptr<EasyServer> create(
+        boost::asio::io_service& service,
+        std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms,
+        boost::uuids::random_generator& generator,
+        std::shared_ptr<spdlog::logger>& logger
+    );
 
     void start();
 
@@ -32,10 +38,15 @@ public:
 
     inline std::string getUsername() const { return username_; }
 
-    static void handle_accept(const std::shared_ptr<EasyServer>& client, [[maybe_unused]] const boost::system::error_code& err,
-                              boost::asio::ip::tcp::acceptor& acceptor, boost::asio::io_service& service,
-                              std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms,
-                              boost::uuids::random_generator& generator, std::shared_ptr<spdlog::logger>& logger);
+    static void handle_accept(
+        const std::shared_ptr<EasyServer>& client,
+        [[maybe_unused]] const boost::system::error_code& err,
+        boost::asio::ip::tcp::acceptor& acceptor,
+        boost::asio::io_service& service,
+        std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms,
+        boost::uuids::random_generator& generator,
+        std::shared_ptr<spdlog::logger>& logger
+    );
 
 private:
     void on_read(const boost::system::error_code& err, size_t bytes);
@@ -61,7 +72,12 @@ private:
     std::shared_ptr<spdlog::logger>& logger_;
 };
 
-void handle_accept(std::shared_ptr<EasyServer> client, [[maybe_unused]] const boost::system::error_code& err, boost::asio::ip::tcp::acceptor& acceptor,
-                   boost::asio::io_service& service,std::unordered_map<std::string, std::vector<EasyServer>>& rooms,
-                   boost::uuids::random_generator& generator,std::shared_ptr<spdlog::logger>& logger
+void handle_accept(
+    std::shared_ptr<EasyServer> client,
+    [[maybe_unused]] const boost::system::error_code& err,
+    boost::asio::ip::tcp::acceptor& acceptor,
+    boost::asio::io_service& service,
+    std::unordered_map<std::string, std::vector<EasyServer>>& rooms,
+    boost::uuids::random_generator& generator,
+    std::shared_ptr<spdlog::logger>& logger
 );

@@ -1,8 +1,7 @@
 #pragma once
 
-#include "deserialize_tools.h"
+#include "common_json.h"
 #include "message.h"
-#include "serialize_tools.h"
 #include "user_interaction.h"
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
@@ -12,12 +11,23 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
-class EasyClient : public std::enable_shared_from_this<EasyClient>, boost::noncopyable {
-    explicit EasyClient(std::string& username, boost::asio::io_service& service, std::shared_ptr<spdlog::logger>& logger);
+class EasyClient
+    : public std::enable_shared_from_this<EasyClient>
+    , boost::noncopyable {
+    explicit EasyClient(
+        std::string& username,
+        boost::asio::io_service& service,
+        std::shared_ptr<spdlog::logger>& logger
+    );
     void start(const boost::asio::ip::tcp::endpoint& ep);
 
 public:
-    static std::shared_ptr<EasyClient> create(const boost::asio::ip::tcp::endpoint& ep, std::string& username, boost::asio::io_service& service, std::shared_ptr<spdlog::logger>& logger);
+    static std::shared_ptr<EasyClient> create(
+        const boost::asio::ip::tcp::endpoint& ep,
+        std::string& username,
+        boost::asio::io_service& service,
+        std::shared_ptr<spdlog::logger>& logger
+    );
     void stop();
     inline bool started() const { return started_; }
 

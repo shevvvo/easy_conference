@@ -10,7 +10,12 @@ void EasyClient::start(const boost::asio::ip::tcp::endpoint& ep) {
     });
 }
 
-std::shared_ptr<EasyClient> EasyClient::create(const boost::asio::ip::tcp::endpoint& ep, std::string& username, boost::asio::io_service& service, std::shared_ptr<spdlog::logger>& logger) {
+std::shared_ptr<EasyClient> EasyClient::create(
+    const boost::asio::ip::tcp::endpoint& ep,
+    std::string& username,
+    boost::asio::io_service& service,
+    std::shared_ptr<spdlog::logger>& logger
+) {
     std::shared_ptr<EasyClient> new_(new EasyClient(username, service, logger));
     new_->start(ep);
     return new_;
@@ -31,16 +36,11 @@ void EasyClient::on_connect(const boost::system::error_code& err) {
     }
     logger_->info("Connected");
     primitives::Command opt{};
-    primitives::get_user_input(
-        std::cin, std::cout, "Choose option:\n1. Create new room\n2. Join existing room\n", opt
-    );
+    primitives::get_user_input(std::cin, std::cout, "Choose option:\n1. Create new room\n2. Join existing room\n", opt);
     switch (opt) {
     case primitives::Command::CMD_CREATE: {
-        auto req = primitives::serialize_json(primitives::NetworkMessage {
-            .command = primitives::Command::CMD_CREATE,
-            .user = username_,
-            .data = ""
-        });
+        auto req = primitives::serialize_json(primitives::NetworkMessage{
+            .command = primitives::Command::CMD_CREATE, .user = username_, .data = "" });
         sock_.async_write_some(
             boost::asio::buffer(req, req.size()),
             [shared_this = shared_from_this()](const boost::system::error_code& err_, size_t bytes) {
@@ -52,11 +52,8 @@ void EasyClient::on_connect(const boost::system::error_code& err) {
     case primitives::Command::CMD_JOIN: {
         std::string chat_id{};
         primitives::get_user_input(std::cin, std::cout, "Enter chat id: ", chat_id);
-        auto req = primitives::serialize_json(primitives::NetworkMessage {
-            .command = primitives::Command::CMD_JOIN,
-            .user = username_,
-            .data = std::move(chat_id)
-        });
+        auto req = primitives::serialize_json(primitives::NetworkMessage{
+            .command = primitives::Command::CMD_JOIN, .user = username_, .data = std::move(chat_id) });
         sock_.async_write_some(
             boost::asio::buffer(req, req.size()),
             [shared_this = shared_from_this()](const boost::system::error_code& err_, size_t bytes) {
@@ -175,11 +172,8 @@ void EasyClient::do_write(const boost::system::error_code& err, size_t bytes) {
     if (!started()) {
         return;
     }
-    auto req = primitives::serialize_json(primitives::NetworkMessage {
-        .command = primitives::Command::CMD_MESSAGE,
-        .user = username_,
-        .data = std::string(input_buffer_, bytes)
-    });
+    auto req = primitives::serialize_json(primitives::NetworkMessage{
+        .command = primitives::Command::CMD_MESSAGE, .user = username_, .data = std::string(input_buffer_, bytes) });
     sock_.async_write_some(
         boost::asio::buffer(req, req.size()),
         [shared_this = shared_from_this()](const boost::system::error_code& err_, size_t bytes_) {
@@ -224,6 +218,8 @@ void EasyClient::read_from_socket() {
         [shared_this = shared_from_this()](const boost::system::error_code& err, size_t bytes) {
             return shared_this->read_complete(err, bytes);
         },
-        [shared_this = shared_from_this()](const boost::system::error_code& err, size_t bytes) { shared_this->on_read(err, bytes); }
+        [shared_this = shared_from_this()](const boost::system::error_code& err, size_t bytes) {
+            shared_this->on_read(err, bytes);
+        }
     );
 }

@@ -1,7 +1,11 @@
 #include "server.h"
 
-EasyServer::EasyServer(boost::asio::io_service& service, std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms,
-                       boost::uuids::random_generator& generator, std::shared_ptr<spdlog::logger>& logger)
+EasyServer::EasyServer(
+    boost::asio::io_service& service,
+    std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms,
+    boost::uuids::random_generator& generator,
+    std::shared_ptr<spdlog::logger>& logger
+)
     : sock_(service), started_(false), rooms_(rooms), random_generator_(generator), logger_(logger) {}
 
 void EasyServer::start() {
@@ -9,8 +13,12 @@ void EasyServer::start() {
     do_read();
 }
 
-std::shared_ptr<EasyServer> EasyServer::create(boost::asio::io_service& service, std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms,
-                                               boost::uuids::random_generator& generator, std::shared_ptr<spdlog::logger>& logger) {
+std::shared_ptr<EasyServer> EasyServer::create(
+    boost::asio::io_service& service,
+    std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms,
+    boost::uuids::random_generator& generator,
+    std::shared_ptr<spdlog::logger>& logger
+) {
     std::shared_ptr<EasyServer> new_client(new EasyServer(service, rooms, generator, logger));
     return new_client;
 }
@@ -47,11 +55,8 @@ void EasyServer::on_read(const boost::system::error_code& err, size_t bytes) {
         if (it != rooms_.end()) {
             room_id_ = id;
             it->second.push_back(shared_from_this());
-            auto answer = primitives::serialize_json(primitives::NetworkMessage {
-                .command = primitives::Command::CMD_JOIN,
-                .user = "",
-                .data = "success"
-            });
+            auto answer = primitives::serialize_json(primitives::NetworkMessage{
+                .command = primitives::Command::CMD_JOIN, .user = "", .data = "success" });
             username_ = req_struct.user;
             sock_.async_write_some(
                 boost::asio::buffer(answer, answer.size()),
@@ -61,11 +66,8 @@ void EasyServer::on_read(const boost::system::error_code& err, size_t bytes) {
             );
 
         } else {
-            auto answer = primitives::serialize_json(primitives::NetworkMessage {
-                .command = primitives::Command::CMD_JOIN,
-                .user = "",
-                .data = "fail"
-            });
+            auto answer = primitives::serialize_json(primitives::NetworkMessage{
+                .command = primitives::Command::CMD_JOIN, .user = "", .data = "fail" });
             sock_.async_write_some(
                 boost::asio::buffer(answer, answer.size()),
                 [shared_this = shared_from_this()](const boost::system::error_code& err_, size_t bytes_) {
@@ -79,11 +81,8 @@ void EasyServer::on_read(const boost::system::error_code& err, size_t bytes) {
         room_id_ = boost::uuids::to_string(random_generator_());
         std::vector<std::shared_ptr<EasyServer>> vec{ shared_from_this() };
         rooms_.insert_or_assign(room_id_, vec);
-        auto answer = primitives::serialize_json(primitives::NetworkMessage {
-            .command = primitives::Command::CMD_CREATE,
-            .user = "",
-            .data = room_id_
-        });
+        auto answer = primitives::serialize_json(primitives::NetworkMessage{
+            .command = primitives::Command::CMD_CREATE, .user = "", .data = room_id_ });
         username_ = req_struct.user;
         sock_.async_write_some(
             boost::asio::buffer(answer, answer.size()),
@@ -151,7 +150,9 @@ void EasyServer::do_write(const std::string& msg) {
     std::copy(msg.begin(), msg.end(), write_buffer_);
     sock_.async_write_some(
         boost::asio::buffer(write_buffer_, msg.size()),
-        [shared_this = shared_from_this()](const boost::system::error_code& err, size_t bytes) { shared_this->on_write(err, bytes); }
+        [shared_this = shared_from_this()](const boost::system::error_code& err, size_t bytes) {
+            shared_this->on_write(err, bytes);
+        }
     );
 }
 
@@ -163,10 +164,15 @@ size_t EasyServer::read_complete(const boost::system::error_code& err, size_t by
     return found ? 0 : 1;
 }
 
-void EasyServer::handle_accept(const std::shared_ptr<EasyServer>& client, [[maybe_unused]] const boost::system::error_code& err,
-                               boost::asio::ip::tcp::acceptor& acceptor, boost::asio::io_service& service,
-                               std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms,
-                               boost::uuids::random_generator& generator, std::shared_ptr<spdlog::logger>& logger) {
+void EasyServer::handle_accept(
+    const std::shared_ptr<EasyServer>& client,
+    [[maybe_unused]] const boost::system::error_code& err,
+    boost::asio::ip::tcp::acceptor& acceptor,
+    boost::asio::io_service& service,
+    std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms,
+    boost::uuids::random_generator& generator,
+    std::shared_ptr<spdlog::logger>& logger
+) {
     logger->info("Handling accept");
     client->start();
     std::shared_ptr<EasyServer> new_client = EasyServer::create(service, rooms, generator, logger);
