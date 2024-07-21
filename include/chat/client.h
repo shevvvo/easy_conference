@@ -48,6 +48,7 @@ private:
     boost::asio::ip::tcp::socket sock_;
     boost::asio::posix::stream_descriptor input_stream_;
     static constexpr int max_msg = 1024;
+    // TODO: unlimited message
     char read_buffer_[max_msg];
     char input_buffer_[max_msg];
     bool started_;
