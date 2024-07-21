@@ -27,6 +27,7 @@ void EasyClient::stop() {
 void EasyClient::on_connect(const boost::system::error_code& err) {
     if (err) {
         stop();
+        return;
     }
     logger_->info("Connected");
     primitives::Command opt{};
@@ -73,6 +74,7 @@ void EasyClient::on_connect(const boost::system::error_code& err) {
 void EasyClient::on_create_sent(const boost::system::error_code& err, [[maybe_unused]] size_t bytes) {
     if (err) {
         stop();
+        return;
     }
     async_read(
         sock_,
@@ -89,6 +91,7 @@ void EasyClient::on_create_sent(const boost::system::error_code& err, [[maybe_un
 void EasyClient::on_create_read(const boost::system::error_code& err, size_t bytes) {
     if (err) {
         stop();
+        return;
     }
     auto new_msg = primitives::deserialize_json(std::string(read_buffer_, bytes - 1));
     if (new_msg.command != primitives::Command::CMD_CREATE) {
@@ -101,12 +104,14 @@ void EasyClient::on_create_read(const boost::system::error_code& err, size_t byt
     } else {
         logger_->info("Failed to create new room");
         stop();
+        return;
     }
 }
 
 void EasyClient::on_join_sent(const boost::system::error_code& err, [[maybe_unused]] size_t bytes) {
     if (err) {
         stop();
+        return;
     }
     async_read(
         sock_,
@@ -124,6 +129,7 @@ void EasyClient::on_join_read(const boost::system::error_code& err, size_t bytes
     logger_->info("Join read " + std::string(read_buffer_, bytes - 1));
     if (err) {
         stop();
+        return;
     }
     auto new_msg = primitives::deserialize_json(std::string(read_buffer_, bytes - 1));
     if (new_msg.command == primitives::Command::CMD_JOIN) {
@@ -133,6 +139,7 @@ void EasyClient::on_join_read(const boost::system::error_code& err, size_t bytes
         } else {
             logger_->info("Failed to join");
             stop();
+            return;
         }
     }
 }
@@ -140,6 +147,7 @@ void EasyClient::on_join_read(const boost::system::error_code& err, size_t bytes
 void EasyClient::on_read(const boost::system::error_code& err, size_t bytes) {
     if (err) {
         stop();
+        return;
     }
     if (!started()) {
         return;
@@ -151,6 +159,7 @@ void EasyClient::on_read(const boost::system::error_code& err, size_t bytes) {
 void EasyClient::on_write(const boost::system::error_code& err, [[maybe_unused]] size_t bytes) {
     if (err) {
         stop();
+        return;
     }
     if (!started()) {
         return;
@@ -161,6 +170,7 @@ void EasyClient::on_write(const boost::system::error_code& err, [[maybe_unused]]
 void EasyClient::do_write(const boost::system::error_code& err, size_t bytes) {
     if (err) {
         stop();
+        return;
     }
     if (!started()) {
         return;

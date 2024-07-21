@@ -30,7 +30,10 @@ void EasyServer::stop() {
 }
 
 void EasyServer::on_read(const boost::system::error_code& err, size_t bytes) {
-    if (err) stop();
+    if (err) {
+        stop();
+        return;
+    }
     if (!getStarted()) return;
     if (!bytes) return;
     std::string req_str = std::string(read_buffer_, bytes - 1);
@@ -124,6 +127,7 @@ void EasyServer::on_read(const boost::system::error_code& err, size_t bytes) {
 void EasyServer::on_write(const boost::system::error_code& err, [[maybe_unused]] size_t bytes) {
     if (err) {
         stop();
+        return;
     }
 }
 
