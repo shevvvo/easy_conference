@@ -1,12 +1,14 @@
 #include "chat/server.h"
 
+#include <utility>
+
 EasyServer::EasyServer(
     boost::asio::io_service& service,
     std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms,
     boost::uuids::random_generator& generator,
-    std::shared_ptr<spdlog::logger>& logger
+    std::shared_ptr<spdlog::logger> logger
 )
-    : sock_(service), started_(false), rooms_(rooms), random_generator_(generator), logger_(logger) {}
+    : sock_(service), started_(false), rooms_(rooms), random_generator_(generator), logger_(std::move(logger)) {}
 
 void EasyServer::start() {
     started_ = true;
@@ -17,9 +19,9 @@ std::shared_ptr<EasyServer> EasyServer::create(
     boost::asio::io_service& service,
     std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms,
     boost::uuids::random_generator& generator,
-    std::shared_ptr<spdlog::logger>& logger
+    std::shared_ptr<spdlog::logger> logger
 ) {
-    std::shared_ptr<EasyServer> new_client(new EasyServer(service, rooms, generator, logger));
+    std::shared_ptr<EasyServer> new_client(new EasyServer(service, rooms, generator, std::move(logger)));
     return new_client;
 }
 

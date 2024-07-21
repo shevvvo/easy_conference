@@ -52,5 +52,5 @@ private:
     char input_buffer_[max_msg];
     bool started_;
     std::string username_;
-    std::shared_ptr<spdlog::logger>& logger_;
+    std::shared_ptr<spdlog::logger> logger_;
 };

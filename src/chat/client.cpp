@@ -1,8 +1,10 @@
 #include "chat/client.h"
+
+#include <utility>
 #include "primitives/message.h"
 
 EasyClient::EasyClient(std::string_view username, boost::asio::io_service& service, std::shared_ptr<spdlog::logger> logger)
-    : sock_(service), input_stream_(service, STDIN_FILENO), started_(true), username_(username), logger_(logger) {}
+    : sock_(service), input_stream_(service, STDIN_FILENO), started_(true), username_(username), logger_(std::move(logger)) {}
 
 void EasyClient::start(const boost::asio::ip::tcp::endpoint& ep) {
     sock_.async_connect(ep, [shared_this = shared_from_this()](const boost::system::error_code& err) {
@@ -49,7 +51,7 @@ void EasyClient::on_connect(const boost::system::error_code& err) {
         break;
     }
     case primitives::Command::JOIN: {
-        const auto chat_id = primitives::get_user_input<std::string>(std::cin, std::cout, "Enter chat id: ");
+        auto chat_id = primitives::get_user_input<std::string>(std::cin, std::cout, "Enter chat id: ");
         auto req = primitives::serialize_json(primitives::NetworkMessage{
             .command = primitives::Command::JOIN, .user = username_, .data = std::move(chat_id) });
         sock_.async_write_some(
@@ -186,6 +188,7 @@ size_t EasyClient::read_complete(const boost::system::error_code& err, size_t by
     }
     bool found = std::find(read_buffer_, read_buffer_ + bytes, '\n') < read_buffer_ + bytes;
     return found ? 0 : 1;
+    //TODO: more than 1
 }
 
 size_t EasyClient::input_complete(const boost::system::error_code& err, size_t bytes) {

@@ -17,7 +17,7 @@ class EasyServer : public std::enable_shared_from_this<EasyServer> {
         boost::asio::io_service& service,
         std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms,
         boost::uuids::random_generator& generator,
-        std::shared_ptr<spdlog::logger>& logger
+        std::shared_ptr<spdlog::logger> logger
     );
 
 public:
@@ -25,7 +25,7 @@ public:
         boost::asio::io_service& service,
         std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms,
         boost::uuids::random_generator& generator,
-        std::shared_ptr<spdlog::logger>& logger
+        std::shared_ptr<spdlog::logger> logger
     );
 
     void start();
@@ -69,7 +69,7 @@ private:
     bool started_;
     std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>>& rooms_;
     boost::uuids::random_generator& random_generator_;
-    std::shared_ptr<spdlog::logger>& logger_;
+    std::shared_ptr<spdlog::logger> logger_;
 };
 
 void handle_accept(
