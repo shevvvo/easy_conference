@@ -80,7 +80,7 @@ void EasyServer::on_read(const boost::system::error_code& err, size_t bytes) {
     case primitives::Command::CMD_CREATE: {
         room_id_ = boost::uuids::to_string(random_generator_());
         std::vector<std::shared_ptr<EasyServer>> vec{ shared_from_this() };
-        rooms_.insert_or_assign(room_id_, vec);
+        rooms_.insert_or_assign(room_id_, std::move(vec));
         auto answer = primitives::serialize_json(primitives::NetworkMessage{
             .command = primitives::Command::CMD_CREATE, .user = "", .data = room_id_ });
         username_ = req_struct.user;
