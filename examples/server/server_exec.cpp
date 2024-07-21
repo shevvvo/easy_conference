@@ -1,4 +1,4 @@
-#include "server.h"
+#include "chat/server.h"
 
 int main([[maybe_unused]] int argc, [[maybe_unused]] char* argv[]) {
     std::unordered_map<std::string, std::vector<std::shared_ptr<EasyServer>>> rooms;

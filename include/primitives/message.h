@@ -4,18 +4,20 @@
 #include <string>
 
 namespace primitives {
-enum Command {
-    CMD_CREATE = 1,
-    CMD_JOIN,
-    CMD_MESSAGE,
+enum class Command {
+    INVALID = 0,
+    CREATE,
+    JOIN,
+    MESSAGE,
 };
 
 NLOHMANN_JSON_SERIALIZE_ENUM(
     Command,
     {
-        { CMD_CREATE, "create" },
-        { CMD_JOIN, "join" },
-        { CMD_MESSAGE, "message" },
+        { Command::INVALID, nullptr},
+        { Command::CREATE, "create" },
+        { Command::JOIN, "join" },
+        { Command::MESSAGE, "message" },
     }
 )
 

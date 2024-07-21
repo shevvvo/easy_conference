@@ -1,8 +1,8 @@
 #pragma once
 
-#include "common_json.h"
-#include "message.h"
-#include "user_interaction.h"
+#include "primitives/common_json.h"
+#include "primitives/message.h"
+#include "primitives/user_interaction.h"
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/thread.hpp>
@@ -15,16 +15,16 @@ class EasyClient
     : public std::enable_shared_from_this<EasyClient>
     , boost::noncopyable {
     explicit EasyClient(
-        std::string& username,
+        std::string_view username,
         boost::asio::io_service& service,
-        std::shared_ptr<spdlog::logger>& logger
+        std::shared_ptr<spdlog::logger> logger
     );
     void start(const boost::asio::ip::tcp::endpoint& ep);
 
 public:
     static std::shared_ptr<EasyClient> create(
         const boost::asio::ip::tcp::endpoint& ep,
-        std::string& username,
+        std::string_view username,
         boost::asio::io_service& service,
         std::shared_ptr<spdlog::logger>& logger
     );

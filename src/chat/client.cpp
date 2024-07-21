@@ -1,7 +1,7 @@
-#include "client.h"
-#include "message.h"
+#include "chat/client.h"
+#include "primitives/message.h"
 
-EasyClient::EasyClient(std::string& username, boost::asio::io_service& service, std::shared_ptr<spdlog::logger>& logger)
+EasyClient::EasyClient(std::string_view username, boost::asio::io_service& service, std::shared_ptr<spdlog::logger> logger)
     : sock_(service), input_stream_(service, STDIN_FILENO), started_(true), username_(username), logger_(logger) {}
 
 void EasyClient::start(const boost::asio::ip::tcp::endpoint& ep) {
@@ -12,7 +12,7 @@ void EasyClient::start(const boost::asio::ip::tcp::endpoint& ep) {
 
 std::shared_ptr<EasyClient> EasyClient::create(
     const boost::asio::ip::tcp::endpoint& ep,
-    std::string& username,
+    std::string_view username,
     boost::asio::io_service& service,
     std::shared_ptr<spdlog::logger>& logger
 ) {
@@ -35,12 +35,11 @@ void EasyClient::on_connect(const boost::system::error_code& err) {
         return;
     }
     logger_->info("Connected");
-    primitives::Command opt{};
-    primitives::get_user_input(std::cin, std::cout, "Choose option:\n1. Create new room\n2. Join existing room\n", opt);
+    const auto opt = primitives::get_user_input<primitives::Command>(std::cin, std::cout, "Choose option:\n1. Create new room\n2. Join existing room\n");
     switch (opt) {
-    case primitives::Command::CMD_CREATE: {
+    case primitives::Command::CREATE: {
         auto req = primitives::serialize_json(primitives::NetworkMessage{
-            .command = primitives::Command::CMD_CREATE, .user = username_, .data = "" });
+            .command = primitives::Command::CREATE, .user = username_, .data = "" });
         sock_.async_write_some(
             boost::asio::buffer(req, req.size()),
             [shared_this = shared_from_this()](const boost::system::error_code& err_, size_t bytes) {
@@ -49,11 +48,10 @@ void EasyClient::on_connect(const boost::system::error_code& err) {
         );
         break;
     }
-    case primitives::Command::CMD_JOIN: {
-        std::string chat_id{};
-        primitives::get_user_input(std::cin, std::cout, "Enter chat id: ", chat_id);
+    case primitives::Command::JOIN: {
+        const auto chat_id = primitives::get_user_input<std::string>(std::cin, std::cout, "Enter chat id: ");
         auto req = primitives::serialize_json(primitives::NetworkMessage{
-            .command = primitives::Command::CMD_JOIN, .user = username_, .data = std::move(chat_id) });
+            .command = primitives::Command::JOIN, .user = username_, .data = std::move(chat_id) });
         sock_.async_write_some(
             boost::asio::buffer(req, req.size()),
             [shared_this = shared_from_this()](const boost::system::error_code& err_, size_t bytes) {
@@ -91,7 +89,7 @@ void EasyClient::on_create_read(const boost::system::error_code& err, size_t byt
         return;
     }
     auto new_msg = primitives::deserialize_json(std::string(read_buffer_, bytes - 1));
-    if (new_msg.command != primitives::Command::CMD_CREATE) {
+    if (new_msg.command != primitives::Command::CREATE) {
         return;
     }
     if (!new_msg.data.empty()) {
@@ -129,7 +127,7 @@ void EasyClient::on_join_read(const boost::system::error_code& err, size_t bytes
         return;
     }
     auto new_msg = primitives::deserialize_json(std::string(read_buffer_, bytes - 1));
-    if (new_msg.command == primitives::Command::CMD_JOIN) {
+    if (new_msg.command == primitives::Command::JOIN) {
         if (new_msg.data == "success") {
             read_from_input();
             read_from_socket();
@@ -173,7 +171,7 @@ void EasyClient::do_write(const boost::system::error_code& err, size_t bytes) {
         return;
     }
     auto req = primitives::serialize_json(primitives::NetworkMessage{
-        .command = primitives::Command::CMD_MESSAGE, .user = username_, .data = std::string(input_buffer_, bytes) });
+        .command = primitives::Command::MESSAGE, .user = username_, .data = std::string(input_buffer_, bytes) });
     sock_.async_write_some(
         boost::asio::buffer(req, req.size()),
         [shared_this = shared_from_this()](const boost::system::error_code& err_, size_t bytes_) {

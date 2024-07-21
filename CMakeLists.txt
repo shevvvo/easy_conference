@@ -21,14 +21,14 @@ project(
         HOMEPAGE_URL "TODO"
         LANGUAGES C CXX)
 
-add_library(${PROJECT_NAME} STATIC primitives/src/common_json.cpp server/src/server.cpp client/src/client.cpp)
-target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/primitives/include ${PROJECT_SOURCE_DIR}/server/include client/include)
+add_library(${PROJECT_NAME} STATIC src/primitives/common_json.cpp src/chat/server.cpp src/chat/client.cpp)
+target_include_directories(${PROJECT_NAME} PUBLIC include)
 sl_target_link_system_libraries(${PROJECT_NAME} PRIVATE Boost::system Boost::asio spdlog::spdlog libassert::assert)
 
 add_subdirectory(dependencies)
 
-add_executable(hard-coding-server server/main.cpp)
-add_executable(hard-coding-client client/main.cpp)
+add_executable(hard-coding-server examples/server/server_exec.cpp)
+add_executable(hard-coding-client examples/client/client_exec.cpp)
 
 sl_target_link_system_libraries(hard-coding-server PRIVATE Boost::system Boost::asio spdlog::spdlog libassert::assert ${PROJECT_NAME})
 sl_target_link_system_libraries(hard-coding-client PRIVATE Boost::system Boost::asio spdlog::spdlog libassert::assert ${PROJECT_NAME})

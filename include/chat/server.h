@@ -1,7 +1,7 @@
 #pragma once
 
-#include "common_json.h"
-#include "message.h"
+#include "primitives/common_json.h"
+#include "primitives/message.h"
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/uuid/uuid_generators.hpp>

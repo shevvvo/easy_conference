@@ -1,4 +1,4 @@
-#include "common_json.h"
+#include "primitives/common_json.h"
 #include <nlohmann/json.hpp>
 
 namespace primitives {

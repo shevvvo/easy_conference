@@ -1,4 +1,4 @@
-#include "server.h"
+#include "chat/server.h"
 
 EasyServer::EasyServer(
     boost::asio::io_service& service,
@@ -49,14 +49,14 @@ void EasyServer::on_read(const boost::system::error_code& err, size_t bytes) {
     spdlog::get("logger")->info("Read the message: " + req_str);
 
     switch (req_struct.command) {
-    case primitives::Command::CMD_JOIN: {
+    case primitives::Command::JOIN: {
         std::string id = req_struct.data;
         auto it = rooms_.find(id);
         if (it != rooms_.end()) {
             room_id_ = id;
             it->second.push_back(shared_from_this());
             auto answer = primitives::serialize_json(primitives::NetworkMessage{
-                .command = primitives::Command::CMD_JOIN, .user = "", .data = "success" });
+                .command = primitives::Command::JOIN, .user = "", .data = "success" });
             username_ = req_struct.user;
             sock_.async_write_some(
                 boost::asio::buffer(answer, answer.size()),
@@ -67,7 +67,7 @@ void EasyServer::on_read(const boost::system::error_code& err, size_t bytes) {
 
         } else {
             auto answer = primitives::serialize_json(primitives::NetworkMessage{
-                .command = primitives::Command::CMD_JOIN, .user = "", .data = "fail" });
+                .command = primitives::Command::JOIN, .user = "", .data = "fail" });
             sock_.async_write_some(
                 boost::asio::buffer(answer, answer.size()),
                 [shared_this = shared_from_this()](const boost::system::error_code& err_, size_t bytes_) {
@@ -77,12 +77,12 @@ void EasyServer::on_read(const boost::system::error_code& err, size_t bytes) {
         }
         break;
     }
-    case primitives::Command::CMD_CREATE: {
+    case primitives::Command::CREATE: {
         room_id_ = boost::uuids::to_string(random_generator_());
         std::vector<std::shared_ptr<EasyServer>> vec{ shared_from_this() };
         rooms_.insert_or_assign(room_id_, std::move(vec));
         auto answer = primitives::serialize_json(primitives::NetworkMessage{
-            .command = primitives::Command::CMD_CREATE, .user = "", .data = room_id_ });
+            .command = primitives::Command::CREATE, .user = "", .data = room_id_ });
         username_ = req_struct.user;
         sock_.async_write_some(
             boost::asio::buffer(answer, answer.size()),
@@ -92,7 +92,7 @@ void EasyServer::on_read(const boost::system::error_code& err, size_t bytes) {
         );
         break;
     }
-    case primitives::Command::CMD_MESSAGE: {
+    case primitives::Command::MESSAGE: {
         if (room_id_.empty()) {
             break;
         }
